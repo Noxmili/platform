@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Игровая платформа</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: #1a1a2e;
+  font-family: system-ui, sans-serif;
+  padding: 2rem;
+}
+.container { text-align: center; }
+h1 {
+  color: #eee;
+  font-size: 2.5rem;
+  margin-bottom: 3rem;
+  font-weight: 300;
+  letter-spacing: 0.1em;
+}
+.music-btn {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  background: #16213e;
+  border: 2px solid #333;
+  color: #eee;
+  font-size: 1.5rem;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 10;
+  transition: background 0.2s;
+}
+.music-btn:hover { background: #1a2a4e; }
+.music-btn.muted { opacity: 0.5; }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.card {
+  background: #16213e;
+  border-radius: 20px;
+  padding: 2rem 1rem;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  border: 2px solid transparent;
+}
+.card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+}
+.card:active { transform: scale(0.96); }
+.card.dino { border-color: #e94560; }
+.card.error { border-color: #533; cursor: not-allowed; }
+.card.error:hover { transform: none; box-shadow: none; }
+.icon {
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4rem;
+  border-radius: 16px;
+}
+.icon.dino { background: #e94560; color: #fff; }
+.icon.error { background: #2a2a3e; color: #555; }
+.label {
+  color: #eee;
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+.label.error { color: #666; }
+.error-badge {
+  background: #a00;
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+/* overlay */
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 100;
+  flex-direction: column;
+}
+.overlay.active { display: flex; }
+.overlay-header {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: #111;
+  gap: 1rem;
+}
+.overlay-header button {
+  background: #e94560;
+  border: none;
+  color: #fff;
+  font-size: 1rem;
+  padding: 0.4rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.overlay-header button:hover { background: #d63851; }
+.overlay-header span { color: #eee; font-size: 1.1rem; }
+.overlay iframe {
+  flex: 1;
+  width: 100%;
+  border: none;
+}
+
+@media (max-width: 700px) {
+  .grid { grid-template-columns: repeat(2, 1fr); }
+  h1 { font-size: 1.8rem; }
+}
+</style>
+</head>
+<body>
+<button class="music-btn" id="musicBtn" onclick="toggleMusic()">🔊</button>
+<div class="container">
+  <h1>🎮 Игровая платформа</h1>
+  <div class="grid">
+    <div class="card dino" onclick="openGame('dino')">
+      <div class="icon dino">🦖</div>
+      <span class="label">Динозаврик</span>
+    </div>
+    <div class="card error" onclick="showError()">
+      <div class="icon error">🔒</div>
+      <span class="label error">Игра 2</span>
+      <span class="error-badge">ERROR</span>
+    </div>
+    <div class="card error" onclick="showError()">
+      <div class="icon error">🔒</div>
+      <span class="label error">Игра 3</span>
+      <span class="error-badge">ERROR</span>
+    </div>
+    <div class="card error" onclick="showError()">
+      <div class="icon error">🔒</div>
+      <span class="label error">Игра 4</span>
+      <span class="error-badge">ERROR</span>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="overlay-header">
+    <button onclick="closeGame()">← Назад</button>
+    <span>🦖 Динозаврик</span>
+  </div>
+  <iframe id="gameFrame" src="dino.html"></iframe>
+</div>
+
+<script>
+let audioCtx = null;
+let musicPlaying = false;
+let musicGain = null;
+let musicInterval = null;
+let musicMuted = false;
+
+const melody = [
+  261.63, 329.63, 392.00, 523.25, 392.00, 329.63,
+  293.66, 349.23, 440.00, 523.25, 440.00, 349.23,
+  261.63, 329.63, 392.00, 523.25, 392.00, 329.63,
+  261.63, 329.63, 392.00, 329.63, 261.63,
+];
+
+function startMusic() {
+  if (audioCtx) return;
+  audioCtx = new (AudioContext || webkitAudioContext)();
+  musicGain = audioCtx.createGain();
+  musicGain.gain.value = 0.08;
+  musicGain.connect(audioCtx.destination);
+
+  let step = 0;
+  function playNote() {
+    if (musicMuted) return;
+    const osc = audioCtx.createOscillator();
+    osc.type = 'square';
+    osc.frequency.value = melody[step % melody.length];
+    const noteGain = audioCtx.createGain();
+    noteGain.gain.value = 0;
+    noteGain.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 0.02);
+    noteGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.28);
+    osc.connect(noteGain);
+    noteGain.connect(musicGain);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.3);
+    step++;
+  }
+  playNote();
+  musicInterval = setInterval(playNote, 300);
+  musicPlaying = true;
+}
+
+function stopMusic() {
+  if (musicInterval) {
+    clearInterval(musicInterval);
+    musicInterval = null;
+  }
+  musicPlaying = false;
+}
+
+function toggleMusic() {
+  const btn = document.getElementById('musicBtn');
+  musicMuted = !musicMuted;
+  btn.textContent = musicMuted ? '🔇' : '🔊';
+  btn.classList.toggle('muted', musicMuted);
+  if (!musicMuted && !musicPlaying) startMusic();
+}
+
+document.addEventListener('click', () => {
+  if (!audioCtx && !musicMuted) startMusic();
+}, { once: true });
+
+function openGame(game) {
+  document.getElementById('overlay').classList.add('active');
+  document.getElementById('gameFrame').src = 'dino.html';
+}
+function closeGame() {
+  document.getElementById('overlay').classList.remove('active');
+  document.getElementById('gameFrame').src = '';
+}
+function showError() {
+  alert('ERROR: Игра недоступна');
+}
+</script>
+</body>
+</html>
