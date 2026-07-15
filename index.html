@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Игровая платформа</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100dvh;
+  background: #1a1a2e;
+  font-family: system-ui, sans-serif;
+  padding: clamp(1rem, 4vw, 2rem);
+}
+.container { text-align: center; width: 100%; }
+h1 {
+  color: #eee;
+  font-size: clamp(1.5rem, 5vw, 2.5rem);
+  margin-bottom: clamp(1.5rem, 5vw, 3rem);
+  font-weight: 300;
+  letter-spacing: 0.1em;
+}
+.music-btn {
+  position: fixed;
+  top: clamp(0.5rem, 2vw, 1rem);
+  right: clamp(0.5rem, 2vw, 1rem);
+  background: #16213e;
+  border: 2px solid #333;
+  color: #eee;
+  font-size: clamp(1rem, 4vw, 1.5rem);
+  width: clamp(36px, 8vw, 50px);
+  height: clamp(36px, 8vw, 50px);
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 10;
+  transition: background 0.2s;
+}
+.music-btn:hover { background: #1a2a4e; }
+.music-btn.muted { opacity: 0.5; }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: clamp(0.75rem, 2.5vw, 1.5rem);
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 clamp(0.5rem, 2vw, 1rem);
+}
+.card {
+  background: #16213e;
+  border-radius: clamp(12px, 3vw, 20px);
+  padding: clamp(1rem, 3vw, 2rem) clamp(0.6rem, 2vw, 1rem);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(0.4rem, 1.5vw, 1rem);
+  border: 2px solid transparent;
+}
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+}
+.card:active { transform: scale(0.96); }
+.card.dino { border-color: #e94560; }
+.card.error { border-color: #533; cursor: not-allowed; }
+.card.error:hover { transform: none; box-shadow: none; }
+.icon {
+  width: clamp(60px, 18vw, 100px);
+  height: clamp(60px, 18vw, 100px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(2rem, 8vw, 4rem);
+  border-radius: clamp(10px, 2.5vw, 16px);
+}
+.icon.dino { background: #e94560; color: #fff; }
+.icon.error { background: #2a2a3e; color: #555; }
+.label {
+  color: #eee;
+  font-size: clamp(0.75rem, 2.5vw, 1.2rem);
+  font-weight: 500;
+}
+.label.error { color: #666; }
+.stats {
+  font-size: clamp(0.6rem, 1.8vw, 0.85rem);
+  color: #888;
+  margin-top: -0.2rem;
+}
+.error-badge {
+  background: #a00;
+  color: #fff;
+  font-size: clamp(0.5rem, 1.8vw, 0.75rem);
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+/* overlay */
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 100;
+  flex-direction: column;
+}
+.overlay.active { display: flex; }
+.overlay-header {
+  display: flex;
+  align-items: center;
+  padding: 0.4rem 0.8rem;
+  background: #111;
+  gap: 0.8rem;
+}
+.overlay-header button {
+  background: #e94560;
+  border: none;
+  color: #fff;
+  font-size: clamp(0.8rem, 2.5vw, 1rem);
+  padding: 0.3rem 0.8rem;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.overlay-header button:hover { background: #d63851; }
+.overlay-header span { color: #eee; font-size: clamp(0.9rem, 2.5vw, 1.1rem); }
+.overlay iframe {
+  flex: 1;
+  width: 100%;
+  border: none;
+}
+
+@media (max-width: 500px) {
+  .grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+<button class="music-btn" id="musicBtn" onclick="toggleMusic()">🔊</button>
+<div class="container">
+  <h1>🎮 Игровая платформа</h1>
+  <div class="grid">
+    <div class="card dino" onclick="openGame('dino')">
+      <div class="icon dino">🦖</div>
+      <span class="label">Динозаврик</span>
+      <span class="stats" id="statDino">—</span>
+    </div>
+    <div class="card error" onclick="showError()">
+      <div class="icon error">🔒</div>
+      <span class="label error">Игра 2</span>
+      <span class="error-badge">ERROR</span>
+    </div>
+    <div class="card error" onclick="showError()">
+      <div class="icon error">🔒</div>
+      <span class="label error">Игра 3</span>
+      <span class="error-badge">ERROR</span>
+    </div>
+    <div class="card error" onclick="showError()">
+      <div class="icon error">🔒</div>
+      <span class="label error">Игра 4</span>
+      <span class="error-badge">ERROR</span>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="overlay-header">
+    <button onclick="closeGame()">← Назад</button>
+    <span>🦖 Динозаврик</span>
+  </div>
+  <iframe id="gameFrame" src="dino.html"></iframe>
+</div>
+
+<script>
+let audioCtx = null;
+let musicPlaying = false;
+let musicGain = null;
+let musicInterval = null;
+let musicMuted = false;
+
+const melody = [
+  261.63, 329.63, 392.00, 523.25, 392.00, 329.63,
+  293.66, 349.23, 440.00, 523.25, 440.00, 349.23,
+  261.63, 329.63, 392.00, 523.25, 392.00, 329.63,
+  261.63, 329.63, 392.00, 329.63, 261.63,
+];
+
+function startMusic() {
+  if (audioCtx) return;
+  audioCtx = new (AudioContext || webkitAudioContext)();
+  musicGain = audioCtx.createGain();
+  musicGain.gain.value = 0.08;
+  musicGain.connect(audioCtx.destination);
+
+  let step = 0;
+  function playNote() {
+    if (musicMuted) return;
+    const osc = audioCtx.createOscillator();
+    osc.type = 'square';
+    osc.frequency.value = melody[step % melody.length];
+    const noteGain = audioCtx.createGain();
+    noteGain.gain.value = 0;
+    noteGain.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 0.02);
+    noteGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.28);
+    osc.connect(noteGain);
+    noteGain.connect(musicGain);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.3);
+    step++;
+  }
+  playNote();
+  musicInterval = setInterval(playNote, 300);
+  musicPlaying = true;
+}
+
+function stopMusic() {
+  if (musicInterval) {
+    clearInterval(musicInterval);
+    musicInterval = null;
+  }
+  musicPlaying = false;
+}
+
+function toggleMusic() {
+  const btn = document.getElementById('musicBtn');
+  musicMuted = !musicMuted;
+  btn.textContent = musicMuted ? '🔇' : '🔊';
+  btn.classList.toggle('muted', musicMuted);
+  if (!musicMuted && !musicPlaying) startMusic();
+}
+
+document.addEventListener('click', () => {
+  if (!audioCtx && !musicMuted) startMusic();
+}, { once: true });
+
+function updateStats() {
+  const dinoBest = localStorage.getItem('dino_best');
+  document.getElementById('statDino').textContent = dinoBest ? `🏆 Рекорд: ${dinoBest}` : '🎮 Играй!';
+}
+
+function openGame(game) {
+  document.getElementById('overlay').classList.add('active');
+  document.getElementById('gameFrame').src = 'dino.html';
+}
+function closeGame() {
+  document.getElementById('overlay').classList.remove('active');
+  document.getElementById('gameFrame').src = '';
+  updateStats();
+}
+function showError() {
+  alert('ERROR: Игра недоступна');
+}
+
+updateStats();
+</script>
+</body>
+</html>
