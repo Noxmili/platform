@@ -11,15 +11,15 @@ body {
   font-family: system-ui, sans-serif;
   padding: 0;
   -webkit-touch-callout: none;
-  touch-action: manipulation;
+  touch-action: none;
 }
 canvas {
   background: #fff;
   display: block;
   width: 100%;
   aspect-ratio: 800 / 300;
-  touch-action: none;
 }
+button, .pause-overlay { touch-action: auto; }
 .score {
   position: fixed;
   top: clamp(0.5rem, 2vw, 1rem);
@@ -207,9 +207,14 @@ document.addEventListener('touchstart', (e) => {
   if (e.target.closest('button, .pause-overlay, .score')) return;
   e.preventDefault();
   tapActive = true;
+  holdJump = true;
   if (paused) return;
   if (gameOver) reset();
-  else { holdJump = true; jump(); }
+  else jump();
+}, { passive: false });
+document.addEventListener('touchmove', (e) => {
+  if (e.target.closest('button, .pause-overlay, .score')) return;
+  e.preventDefault();
 }, { passive: false });
 document.addEventListener('touchend', () => {
   tapActive = false;
