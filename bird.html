@@ -14,22 +14,12 @@ body {
   touch-action: manipulation;
   margin: 0;
   height: 100dvh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
 canvas {
   display: block;
-  width: 100%;
-  max-height: 100dvh;
-  aspect-ratio: 800 / 300;
+  position: relative;
   background: #87ceeb;
   touch-action: none;
-}
-@media (max-width: 600px) {
-  canvas {
-    aspect-ratio: 4 / 3;
-  }
 }
 .score {
   position: fixed;
@@ -115,13 +105,22 @@ const scoreEl = document.getElementById('score');
 
 function resizeCanvas() {
   const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  const w = Math.round(rect.width);
-  const h = Math.round(rect.height);
-  if (canvas.width !== w * dpr || canvas.height !== h * dpr) {
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-  }
+  const maxW = window.innerWidth;
+  const maxH = window.innerHeight;
+  const isPhone = maxW < 600;
+  const aspect = isPhone ? 4 / 3 : 800 / 300;
+  let scale = maxW / 800;
+  if (isPhone) scale *= 1.2;
+  const w = Math.round(800 * scale);
+  const h = Math.round(w / aspect);
+  const marginLeft = Math.round((maxW - w) / 2);
+  const marginTop = Math.round((maxH - h) / 2);
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  canvas.style.marginLeft = marginLeft + 'px';
+  canvas.style.marginTop = marginTop + 'px';
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
 }
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
