@@ -205,6 +205,7 @@ document.addEventListener('mouseup', () => { if (!tapActive) holdJump = false; }
 document.addEventListener('mouseleave', () => { if (!tapActive) holdJump = false; });
 document.addEventListener('touchstart', (e) => {
   if (e.target.closest('button, .pause-overlay, .score')) return;
+  e.preventDefault();
   tapActive = true;
   if (paused) return;
   if (gameOver) reset();
