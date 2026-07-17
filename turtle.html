@@ -202,6 +202,7 @@ document.addEventListener('mousedown', (e) => {
 document.addEventListener('mouseup', () => { holdJump = false; });
 document.addEventListener('mouseleave', () => { holdJump = false; });
 canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
   if (paused) return;
   if (gameOver) reset();
   else { holdJump = true; jump(); }
