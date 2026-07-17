@@ -203,19 +203,18 @@ document.addEventListener('mousedown', (e) => {
 });
 document.addEventListener('mouseup', () => { if (!tapActive) holdJump = false; });
 document.addEventListener('mouseleave', () => { if (!tapActive) holdJump = false; });
-canvas.addEventListener('touchstart', (e) => {
-  e.preventDefault();
+document.addEventListener('touchstart', (e) => {
+  if (e.target.closest('button, .pause-overlay, .score')) return;
   tapActive = true;
   if (paused) return;
   if (gameOver) reset();
   else { holdJump = true; jump(); }
 }, { passive: false });
-canvas.addEventListener('touchend', (e) => {
-  e.preventDefault();
+document.addEventListener('touchend', () => {
   tapActive = false;
   holdJump = false;
-}, { passive: false });
-canvas.addEventListener('touchcancel', (e) => {
+});
+document.addEventListener('touchcancel', () => {
   tapActive = false;
   holdJump = false;
 });
