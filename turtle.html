@@ -193,22 +193,32 @@ document.addEventListener('keyup', (e) => {
   }
 });
 
+var tapActive = false;
 document.addEventListener('mousedown', (e) => {
   if (e.button !== 0) return;
   if (paused) return;
+  if (tapActive) return;
   if (gameOver) reset();
   else { holdJump = true; jump(); }
 });
-document.addEventListener('mouseup', () => { holdJump = false; });
-document.addEventListener('mouseleave', () => { holdJump = false; });
+document.addEventListener('mouseup', () => { if (!tapActive) holdJump = false; });
+document.addEventListener('mouseleave', () => { if (!tapActive) holdJump = false; });
 canvas.addEventListener('touchstart', (e) => {
   e.preventDefault();
+  tapActive = true;
   if (paused) return;
   if (gameOver) reset();
   else { holdJump = true; jump(); }
 }, { passive: false });
-document.addEventListener('touchend', () => { holdJump = false; });
-document.addEventListener('touchcancel', () => { holdJump = false; });
+canvas.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  tapActive = false;
+  holdJump = false;
+}, { passive: false });
+canvas.addEventListener('touchcancel', (e) => {
+  tapActive = false;
+  holdJump = false;
+});
 
 window.addEventListener('message', (e) => {
   if (e.data === 'pause') togglePause();
