@@ -7,17 +7,18 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; user-select: none; }
 body {
-  background: #f7f7f7;
+  overflow: hidden;
+  background: #1a1a2e;
   font-family: system-ui, sans-serif;
-  padding: 0;
+  margin: 0;
+  height: 100dvh;
   -webkit-touch-callout: none;
   touch-action: none;
 }
 canvas {
-  background: #fff;
   display: block;
-  width: 100%;
-  aspect-ratio: 800 / 300;
+  position: relative;
+  background: #fff;
 }
 button, .pause-overlay { touch-action: auto; }
 .score {
@@ -102,6 +103,28 @@ const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const scoreEl = document.getElementById('score');
 
+function resizeCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  const maxW = window.innerWidth;
+  const maxH = window.innerHeight;
+  const isPhone = maxW < 600;
+  const aspect = isPhone ? 4 / 3 : 800 / 300;
+  let scale = maxW / 800;
+  if (isPhone) scale *= 1.2;
+  const w = Math.round(800 * scale);
+  const h = Math.round(w / aspect);
+  const marginLeft = Math.round((maxW - w) / 2);
+  const marginTop = Math.round((maxH - h) / 2);
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  canvas.style.marginLeft = marginLeft + 'px';
+  canvas.style.marginTop = marginTop + 'px';
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
 const GROUND = 250;
 let bestScore = parseInt(localStorage.getItem('dino_best') || '0');
 const GRAVITY = 0.6;
@@ -125,7 +148,7 @@ const clouds = [];
 
 for (let i = 0; i < 4; i++) {
   clouds.push({
-    x: Math.random() * canvas.width,
+    x: Math.random() * 800,
     y: 30 + Math.random() * 80,
     w: 40 + Math.random() * 30,
     speed: 0.2 + Math.random() * 0.3,
@@ -302,7 +325,7 @@ function drawCloud(o) {
 }
 
 function drawGround() {
-  rect(0, GROUND + 2, canvas.width, 2, '#333');
+  rect(0, GROUND + 2, 800, 2, '#333');
 }
 
 function update(dt) {
@@ -324,7 +347,7 @@ function update(dt) {
   for (const c of clouds) {
     c.x -= c.speed * dt;
     if (c.x + c.w < 0) {
-      c.x = canvas.width + c.w;
+      c.x = 800 + c.w;
       c.y = 20 + Math.random() * 90;
     }
   }
@@ -337,14 +360,14 @@ function update(dt) {
     const r = Math.random();
     if (score > 30 && r < 0.2) {
       const birdY = [GROUND - 60 - sizeBonus, GROUND - 35, GROUND - 95 - sizeBonus][Math.floor(Math.random() * 3)];
-      obstacles.push({ x: canvas.width, y: birdY, w: 20, h: 16, type: 'bird', giveScore: true });
+      obstacles.push({ x: 800, y: birdY, w: 20, h: 16, type: 'bird', giveScore: true });
     } else {
       const count = [2, 2, 3, 3][Math.floor(Math.random() * 4)];
       const h = 30 + sizeBonus + Math.random() * 20;
       const w = 12 + Math.floor(sizeBonus / 5) + Math.random() * 8;
       for (let i = 0; i < count; i++) {
         obstacles.push({
-          x: canvas.width + i * (20 + Math.random() * 15),
+          x: 800 + i * (20 + Math.random() * 15),
           y: GROUND + 2,
           w,
           h,
@@ -393,7 +416,9 @@ function update(dt) {
 }
 
 function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(canvas.width / 800, canvas.height / 300);
+  ctx.clearRect(0, 0, 800, 300);
 
   for (const c of clouds) drawCloud(c);
   drawGround();
@@ -405,18 +430,18 @@ function draw() {
   drawDino();
 
   if (gameOver) {
-    const fs = Math.max(16, canvas.width * 0.03);
-    const fs2 = Math.max(11, canvas.width * 0.016);
-    const cx = canvas.width / 2;
+    const fs = Math.max(16, 24);
+    const fs2 = Math.max(11, 13);
+    const cx = 400;
     ctx.textAlign = 'center';
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(cx - 140, canvas.height * 0.26, 280, canvas.height * 0.35);
+    ctx.fillRect(cx - 140, 78, 280, 105);
     ctx.fillStyle = '#fff';
     ctx.font = `bold ${fs}px system-ui`;
-    ctx.fillText('Game Over', cx, canvas.height * 0.33);
+    ctx.fillText('Game Over', cx, 99);
     ctx.font = `${fs2}px system-ui`;
-    ctx.fillText(`Очки: ${score}  Рекорд: ${bestScore}`, cx, canvas.height * 0.45);
-    ctx.fillText('Нажми пробел для рестарта', cx, canvas.height * 0.55);
+    ctx.fillText(`Очки: ${score}  Рекорд: ${bestScore}`, cx, 135);
+    ctx.fillText('Нажми пробел для рестарта', cx, 165);
   }
 }
 
