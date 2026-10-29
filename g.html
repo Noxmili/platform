@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Хранитель Архива XX Века — Игра-Презентация</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Tone.js для генерации звуковых эффектов -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            serif: ['"Cormorant Garamond"', 'serif'],
+            sans: ['Inter', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            obsidian: '#06070A',
+            charcoal: '#10121A',
+            gold: '#D4AF37',
+            crimson: '#E11D48',
+            emerald: '#10B981',
+            ivory: '#F5F2EB',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+    body {
+      background-color: #06070A;
+      color: #F5F2EB;
+      overflow-x: hidden;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .film-grain {
+      background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 0);
+      background-size: 22px 22px;
+    }
+
+    .glass-card {
+      background: rgba(16, 18, 26, 0.78);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .glass-card-interactive:hover {
+      border-color: rgba(212, 175, 55, 0.5);
+      transform: translateY(-3px);
+      box-shadow: 0 20px 45px rgba(212, 175, 55, 0.12);
+    }
+
+    .game-btn {
+      position: relative;
+      overflow: hidden;
+      transition: all 0.25s ease;
+      cursor: pointer;
+    }
+    .game-btn:active {
+      transform: scale(0.97);
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+    .shake-error {
+      animation: shake 0.45s ease-in-out;
+      border-color: #E11D48 !important;
+    }
+
+    @keyframes pulse-gold {
+      0% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.6); }
+      70% { box-shadow: 0 0 0 18px rgba(212, 175, 55, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
+    }
+    .unlock-glow {
+      animation: pulse-gold 1.2s ease-out;
+    }
+
+    .portrait-box {
+      background: radial-gradient(circle at center, #1F2333 0%, #0A0C12 100%);
+      overflow: hidden;
+    }
+    .portrait-box img {
+      transition: transform 0.6s ease, filter 0.6s ease;
+      filter: grayscale(15%) contrast(1.08);
+    }
+    .portrait-box:hover img {
+      transform: scale(1.06);
+      filter: grayscale(0%) contrast(1.12);
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: transparent;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 24px;
+      width: 24px;
+      border-radius: 50%;
+      background: #D4AF37;
+      cursor: pointer;
+      margin-top: -8px;
+      box-shadow: 0 0 12px rgba(212, 175, 55, 0.8);
+    }
+    input[type=range]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 8px;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 999px;
+    }
+
+    .ambient-orb {
+      position: fixed;
+      border-radius: 9999px;
+      filter: blur(130px);
+      pointer-events: none;
+      z-index: 0;
+      transition: all 1.2s ease-in-out;
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #06070A; }
+    ::-webkit-scrollbar-thumb { background: #262938; border-radius: 9999px; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between relative">
+
+  <!-- Фоновый интерактивный Canvas -->
+  <canvas id="cosmos-canvas" class="fixed inset-0 pointer-events-none z-0 opacity-45"></canvas>
+
+  <!-- Атмосферное освещение -->
+  <div id="orb-1" class="ambient-orb w-[34rem] h-[34rem] bg-amber-500/15 -top-32 -left-32"></div>
+  <div id="orb-2" class="ambient-orb w-[38rem] h-[38rem] bg-rose-600/10 -bottom-40 -right-24"></div>
+  <div class="fixed inset-0 film-grain pointer-events-none z-0"></div>
+
+  <!-- =========================================================
+       ВЕРХНЯЯ ИГРОВАЯ ПАНЕЛЬ (HUD ХРАНИТЕЛЯ АРХИВА)
+  ========================================================== -->
+  <header class="sticky top-0 z-40 px-4 sm:px-8 py-3.5 bg-obsidian/90 backdrop-blur-xl border-b border-white/10">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      
+      <!-- Логотип (нажатие всегда возвращает в Зал 01) -->
+      <div onclick="jumpToStage(0)" class="flex items-center gap-3 cursor-pointer group" title="Вернуться на главную страницу (Зал 01)">
+        <div class="w-10 h-10 rounded-xl bg-gold/15 border border-gold/40 flex items-center justify-center text-gold group-hover:bg-gold group-hover:text-obsidian transition-all">
+          <i class="fa-solid fa-house-chimney text-sm"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-mono text-[11px] uppercase tracking-[0.2em] text-gold font-semibold" id="player-rank">Ранг: Искатель</span>
+            <span class="px-2 py-0.5 text-[10px] font-mono rounded-full bg-white/10 text-white/80" id="xp-badge">100 XP</span>
+          </div>
+          <h1 class="font-serif text-lg sm:text-xl font-bold text-white leading-none mt-0.5 group-hover:text-gold transition-colors">Архив Литературы XX Века</h1>
+        </div>
+      </div>
+
+      <!-- Свободный выбор любого номера зала (1–7) -->
+      <div class="flex items-center gap-1.5 flex-wrap" id="hud-level-nodes">
+        <!-- Заполняется через JS -->
+      </div>
+
+      <!-- Кнопки управления -->
+      <div class="flex items-center gap-2">
+        <button onclick="toggleCodex()" class="game-btn flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 hover:bg-gold/20 border border-white/15 hover:border-gold/50 text-xs font-medium text-ivory">
+          <i class="fa-solid fa-book-journal-whills text-gold"></i>
+          <span class="hidden sm:inline">Кодекс лиц</span>
+          <span id="codex-counter" class="px-1.5 py-0.5 rounded bg-gold text-obsidian font-mono font-bold text-[10px]">0/9</span>
+        </button>
+
+        <button id="godmode-btn" onclick="unlockAllStages()" class="game-btn flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/30 border border-emerald-400/40 text-xs font-semibold text-emerald-300" title="Разблокировать все страницы сразу">
+          <i class="fa-solid fa-unlock-keyhole"></i>
+          <span>Открыть всё</span>
+        </button>
+
+        <button onclick="toggleVoiceStudio()" class="game-btn flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-amber-500/25 to-rose-500/25 hover:from-amber-500/40 hover:to-rose-500/40 border border-gold/60 text-xs font-bold text-gold">
+          <i class="fa-solid fa-microphone-lines"></i>
+          <span class="hidden md:inline">Студия Озвучки</span>
+        </button>
+
+        <button id="sound-btn" onclick="toggleSound()" class="w-9 h-9 rounded-xl flex items-center justify-center bg-white/5 hover:bg-white/10 border border-white/15 text-gold transition-all" title="Звуковые эффекты">
+          <i id="sound-icon" class="fa-solid fa-volume-high text-xs"></i>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Полоса прогресса -->
+    <div class="max-w-7xl mx-auto mt-2.5 h-1.5 bg-white/5 rounded-full overflow-hidden">
+      <div id="global-progress-bar" class="h-full bg-gradient-to-r from-amber-500 via-gold to-emerald-400 w-[14%] transition-all duration-500"></div>
+    </div>
+  </header>
+
+  <!-- =========================================================
+       ПАНЕЛЬ ЖИВОГО ИИ-РАССКАЗЧИКА (3 ПЕРВЫХ ГОЛОСА)
+  ========================================================== -->
+  <section class="relative z-30 px-4 sm:px-8 pt-4 max-w-7xl mx-auto w-full">
+    <div class="glass-card rounded-2xl px-4 sm:px-6 py-3.5 border border-gold/35 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+      
+      <div class="flex items-start sm:items-center gap-3.5 flex-1">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500 to-rose-600 p-0.5 shrink-0 shadow-lg shadow-amber-500/20">
+          <div class="w-full h-full bg-obsidian rounded-[14px] flex items-center justify-center text-gold">
+            <i id="narrator-icon" class="fa-solid fa-masks-theater text-lg"></i>
+          </div>
+        </div>
+        <div class="space-y-0.5 flex-1">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 rounded bg-gold/20 text-gold font-bold">Живой мужской голос (Neural HD)</span>
+            <span id="voice-status-badge" class="font-mono text-[10px] text-emerald-300">Активен Gemini 2.5 Neural TTS • Без робота</span>
+          </div>
+          <p id="narrator-script-preview" class="text-xs sm:text-sm text-ivory/90 italic font-serif leading-snug">
+            «Хе-хе! Думаете, литература XX века — это скука? Как бы не так!»
+          </p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto justify-end shrink-0">
+        <select id="quick-voice-mode" onchange="updateNarratorPreview()" class="bg-white/5 border border-white/15 rounded-xl px-3 py-2 text-xs text-ivory font-mono focus:outline-none focus:border-gold">
+          <option value="standup" selected class="bg-charcoal text-ivory">🎭 Мужской харизматичный с юмором (Fenrir)</option>
+          <option value="duo" class="bg-charcoal text-ivory">🔥 Мужской спор 2 ведущих (Puck + Orus)</option>
+          <option value="cinema" class="bg-charcoal text-ivory">🎬 Низкий серьёзный бас-баритон (Charon)</option>
+        </select>
+
+        <button id="play-slide-tts-btn" onclick="speakCurrentSlide()" class="game-btn px-4 py-2 rounded-xl bg-gradient-to-r from-gold to-amber-500 text-obsidian font-bold text-xs flex items-center gap-2 shadow-lg shadow-gold/20">
+          <i id="play-slide-tts-icon" class="fa-solid fa-play"></i>
+          <span id="play-slide-tts-label">Озвучить зал</span>
+        </button>
+
+        <button id="stop-slide-tts-btn" onclick="stopTTSAudio()" class="hidden px-3 py-2 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-mono hover:bg-rose-500/30" title="Остановить озвучку">
+          <i class="fa-solid fa-stop"></i>
+        </button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Всплывающее уведомление -->
+  <div id="toast-box" class="fixed top-24 right-6 z-50 max-w-sm glass-card border-l-4 border-l-gold px-5 py-4 rounded-2xl shadow-2xl transform translate-x-[140%] transition-transform duration-500 flex items-center gap-3.5 pointer-events-none">
+    <div class="w-10 h-10 rounded-full bg-gold/20 border border-gold flex items-center justify-center text-gold shrink-0">
+      <i class="fa-solid fa-award text-lg"></i>
+    </div>
+    <div>
+      <p id="toast-title" class="font-mono text-[11px] uppercase tracking-wider text-gold font-bold">Страница открыта!</p>
+      <p id="toast-desc" class="text-xs text-white/90 mt-0.5">Новые данные добавлены в Кодекс.</p>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       ГЛАВНАЯ ИГРОВАЯ СЦЕНА (ЗАЛЫ 01 - 07)
+  ========================================================== -->
+  <main class="relative z-10 flex-1 flex flex-col justify-center px-4 sm:px-8 py-6 max-w-7xl mx-auto w-full">
+    <div id="stage-container" class="w-full"></div>
+  </main>
+
+  <!-- =========================================================
+       МОДАЛЬНОЕ ОКНО: КОДЕКС ЛИЦ
+  ========================================================== -->
+  <div id="codex-modal" onclick="if(event.target === this) toggleCodex()" class="fixed inset-0 z-50 bg-obsidian/95 backdrop-blur-2xl p-4 sm:p-10 overflow-y-auto hidden">
+    <div class="max-w-6xl mx-auto space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-5">
+        <div>
+          <span class="font-mono text-xs text-gold uppercase tracking-widest">Ваша коллекция открытых авторов</span>
+          <h2 class="font-serif text-3xl sm:text-4xl font-bold text-white mt-1">Кодекс наглядных представителей XX века</h2>
+        </div>
+        <button onclick="toggleCodex()" class="px-5 py-2.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-xs font-mono uppercase text-rose-200 flex items-center gap-2 self-start">
+          <i class="fa-solid fa-xmark"></i>
+          <span>Закрыть окно (Esc)</span>
+        </button>
+      </div>
+      <div id="codex-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       МОДАЛЬНОЕ ОКНО: СТУДИЯ ОЗВУЧКИ (С КНОПКОЙ БЫСТРОГО ВЫХОДА)
+  ========================================================== -->
+  <div id="voice-studio-modal" onclick="if(event.target === this) toggleVoiceStudio()" class="fixed inset-0 z-50 bg-obsidian/95 backdrop-blur-2xl p-4 sm:p-8 overflow-y-auto hidden">
+    <div class="max-w-5xl mx-auto space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-5">
+        <div>
+          <span class="font-mono text-xs text-gold uppercase tracking-widest">Три фирменных голоса презентации</span>
+          <h2 class="font-serif text-3xl sm:text-4xl font-bold text-white mt-1">Студия Харизматичной Озвучки</h2>
+        </div>
+        <button onclick="toggleVoiceStudio()" class="px-5 py-2.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-xs font-mono uppercase text-rose-200 flex items-center gap-2 self-start">
+          <i class="fa-solid fa-xmark"></i>
+          <span>Вернуться к слайдам (Esc)</span>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-5 space-y-4">
+          <div class="glass-card p-5 rounded-2xl space-y-4 border border-white/10">
+            <h3 class="font-mono text-xs uppercase tracking-wider text-gold font-bold">1. Выберите мужской тембр и зал</h3>
+            
+            <div class="space-y-2">
+              <label class="text-xs text-white/70 block">Мужской голос (Neural TTS):</label>
+              <select id="studio-mode-select" onchange="loadStudioPreset()" class="w-full bg-obsidian border border-white/15 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-gold">
+                <option value="standup">🎭 Мужской харизматичный с юмором (Fenrir)</option>
+                <option value="duo">🔥 Мужской спор 2 ведущих (Puck + Orus)</option>
+                <option value="cinema">🎬 Низкий серьёзный бас-баритон (Charon)</option>
+              </select>
+            </div>
+
+            <div class="space-y-2">
+              <label class="text-xs text-white/70 block">Выберите номер слайда (и перейти к нему):</label>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2" id="studio-stage-buttons"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-7 flex flex-col justify-between glass-card p-5 rounded-2xl border border-gold/30 space-y-4">
+          <div class="space-y-2 flex-1 flex flex-col">
+            <label class="font-mono text-xs uppercase tracking-wider text-gold font-bold">2. Короткий текст для озвучки (~250 символов)</label>
+            <textarea id="studio-script-textarea" rows="7" class="w-full flex-1 bg-obsidian/90 border border-white/15 rounded-xl p-4 text-sm text-ivory font-sans leading-relaxed focus:outline-none focus:border-gold resize-none"></textarea>
+          </div>
+
+          <div class="pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2">
+              <button id="studio-generate-btn" onclick="generateStudioVoice()" class="game-btn px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 text-obsidian font-bold text-xs uppercase tracking-wider flex items-center gap-2">
+                <i id="studio-generate-icon" class="fa-solid fa-wand-magic-sparkles"></i>
+                <span id="studio-generate-label">Озвучить живым голосом</span>
+              </button>
+
+              <a id="studio-download-wav" href="#" download="voiceover_slide.wav" class="hidden game-btn px-4 py-2.5 rounded-xl bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 text-xs font-mono flex items-center gap-2">
+                <i class="fa-solid fa-download"></i>
+                <span>Скачать .WAV</span>
+              </a>
+            </div>
+
+            <button onclick="copyStudioText()" class="game-btn px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-mono text-white flex items-center gap-2">
+              <i class="fa-solid fa-copy text-gold"></i>
+              <span id="copy-btn-label">Скопировать текст</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       НИЖНЯЯ ПАНЕЛЬ НАВИГАЦИИ (ВСЕГДА ДОСТУПНА)
+  ========================================================== -->
+  <footer class="sticky bottom-0 z-40 px-4 sm:px-8 py-3.5 bg-obsidian/90 backdrop-blur-xl border-t border-white/10">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+      
+      <div class="flex items-center gap-3">
+        <span id="stage-indicator" class="font-mono text-xs sm:text-sm font-bold text-gold">ЗАЛ 01 / 07</span>
+        <span id="stage-status-pill" class="px-2.5 py-0.5 rounded-full text-[11px] font-mono uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+          Открыто
+        </span>
+      </div>
+
+      <div class="hidden md:flex items-center gap-2 text-xs text-white/60 font-mono">
+        <i class="fa-solid fa-arrows-left-right text-gold"></i>
+        <span>Используйте стрелки ← → или нажимайте на номера 1–7 сверху для мгновенного перехода</span>
+      </div>
+
+      <div class="flex items-center gap-2.5">
+        <button id="prev-btn" onclick="goPrevStage()" class="game-btn px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-medium text-white flex items-center gap-2 disabled:opacity-30">
+          <i class="fa-solid fa-chevron-left text-[10px]"></i>
+          <span>Назад</span>
+        </button>
+        <button id="next-btn" onclick="goNextStage()" class="game-btn px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 text-obsidian text-xs font-bold flex items-center gap-2 shadow-lg shadow-amber-500/20">
+          <span id="next-btn-label">Далее</span>
+          <i class="fa-solid fa-chevron-right text-[10px]"></i>
+        </button>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- =========================================================
+       ПОЛНЫЙ РАБОЧИЙ СКРИПТ ИГРЫ И ОЗВУЧКИ
+  ========================================================== -->
+  <script>
+    let soundEnabled = true;
+    let currentStage = 0;
+    let playerXP = 100;
+    let selectedStudioStage = 0;
+    // По умолчанию делаем первый зал открытым, а при клике на любой номер сверху — сразу переключаем!
+    let unlockedStages = [true, false, false, false, false, false, false];
+    let solvedStages = [false, false, false, false, false, false, false];
+    let sealsExtinguished = [false, false, false];
+
+    // Короткие тексты (~250 символов) для трёх режимов
+    const charismaticScripts = {
+      standup: [
+        `Хе-хе! Думаете, литература XX века — это скука? Как бы не так! Это время, когда писатели разбили классический сюжет и залезли к нам прямо в подсознание. Тут люди превращаются в жуков, спорят с дьяволом в Москве и ломают само время. Взломаем Архив? Погнали!`,
+        `Добро пожаловать в Серебряный век — настоящий поэтический бойцовский клуб! Тут символист Блок ловит мистические туманы, акмеистка Ахматова превращает детали в чистую психологию, а футурист Маяковский с ноги вышибает дверь, сбрасывая классиков с парохода!`,
+        `Держитесь крепче — мы в лабиринтах модернизма! Главная драма теперь внутри черепной коробки. Джойс пишет огромный том про один день в Дублине, Пруст запускает машину времени печеньем, а у Кафки человек просыпается жуком и боится опоздать в офис. Знакомо?`,
+        `Четвёртый зал — суровая проза «Потерянного поколения»! Вернувшись с войны, Хемингуэй и Ремарк отбросили фальшивый пафос. Эрнест придумал «принцип айсберга»: на поверхности лишь 15% сухого текста, а 85% боли и трагедии спрятаны глубоко на дне. Включаем сонар?`,
+        `В пятом зале — магия русского романа! Шолохов пишет грандиозный «Тихий Дон», Платонов изобретает пронзительный язык в «Котловане», а Набоков плетет узоры памяти. Но главный бал правит Булгаков: сатана в Москве лично доказывает, что рукописи не горят!`,
+        `Улыбнитесь, Большой Брат следит за вами! Писатели XX века оказались пугающе точными пророками. Все знают «1984» Оруэлла и «Дивный новый мир» Хаксли, но первую матрицу всех антиутопий создал наш Евгений Замятин в романе «Мы»! А Камю добавил философию бунта.`,
+        `Финал нашей одиссеи — Магический реализм и Постмодернизм! У Маркеса в «Ста годах одиночества» идут дожди из жёлтых цветов, и это считается обычным вторником. А гений Борхес задолго до интернета придумал гипертекст и лабиринты смыслов. Теперь соавтор — вы!`
+      ],
+      duo: [
+        `Макс: Слушай, Дэн, XX век в литературе — это же просто взрыв мозга!
+Дэн: Ещё бы, брат! Писатели отказались от старых правил: у Кафки люди становятся насекомыми, а у Булгакова по Москве гуляет Воланд!`,
+        `Макс: Серебряный век — это битва титанов! Блок — про мистику, Ахматова — про точную деталь.
+Дэн: А Маяковский в жёлтой кофте просто с ноги выбил дверь и потребовал сбросить классиков с парохода современности!`,
+        `Макс: Дэн, ну как Джойс умудрился написать 800 страниц про один день?!
+Дэн: Ха, это поток сознания, Макс! Модернисты Кафка, Пруст и Джойс перенесли сюжет из внешнего мира внутрь человеческого разума.`,
+        `Макс: Почему Хемингуэй писал так коротко, по-мужски и рублено?
+Дэн: Это «принцип айсберга»! На виду только 15% диалогов, а 85% боли «потерянного поколения» скрыто глубоко под водой.`,
+        `Макс: Русский роман XX века — это чистая мощь! «Тихий Дон» Шолохова, «Котлован» Платонова, стиль Набокова.
+Дэн: И конечно, «Мастер и Маргарита» Булгакова, где рукописи не горят!`,
+        `Макс: Оруэлл в «1984» предсказал тотальную слежку, а Хаксли — мир потребления.
+Дэн: Но не забывай: первым матрицу всех антиутопий создал наш Евгений Замятин в романе «Мы» ещё в 1920 году!`,
+        `Макс: В финале века Маркес соединил миф и быт в «Ста годах одиночества».
+Дэн: А Борхес и Умберто Эко превратили литературу в интеллектуальный лабиринт и гипертекст!`
+      ],
+      cinema: [
+        `Двадцатый век навсегда изменил законы человеческого духа. Литература перестала быть просто рассказом — она стала судом над эпохой и хроникой великих катастроф. Каждый зал этого Архива хранит историю тех, кто не побоялся взглянуть в бездну.`,
+        `Серебряный век русской поэзии. На изломе империи сталкиваются три непримиримые стихии. Мистическое предчувствие Блока, строгая и холодная точность Ахматовой и сокрушительный напор Маяковского. Поэзия становится оружием.`,
+        `Европейский модернизм. Когда рушится внешний мир, главная битва переносится внутрь человеческого сознания. Джойс, Пруст и Франц Кафка вскрывают механизмы памяти, страха и полного одиночества человека перед лицом безликой системы.`,
+        `Проза потерянного поколения. Вернувшись из окопов Первой мировой, Хемингуэй и Ремарк навсегда отказались от громких слов. Их метод — суровый принцип айсберга. На поверхности — лишь скупые факты, а на глубине — невысказанная трагедия целого поколения.`,
+        `Русский роман двадцатого столетия. Эпоха великих потрясений рождает тексты невероятной силы. Народный эпос Шолохова, метафизическая глубина Платонова, безупречный стиль Набокова и вечный приговор Булгакова: рукописи не горят.`,
+        `Антиутопии и философия экзистенциализма. Замятин, Хаксли и Оруэлл с пугающей точностью описали механизмы тотальной власти над человеком. А Альбер Камю поставил главный вопрос века: как сохранить внутреннюю свободу в абсурдном мире.`,
+        `Финал столетия. Магический реализм Габриэля Гарсиа Маркеса стирает грань между мифом и реальностью, а Хорхе Луис Борхес превращает мировую культуру в бесконечный лабиринт смыслов. Отныне главный соавтор книги — сам читатель.`
+      ]
+    };
+
+    // База 9 портретов для Кодекса
+    const writersCodex = [
+      { id: 'blok', stage: 1, name: 'Александр Блок', school: 'Символизм', work: 'Поэма «Двенадцать»', img: 'https://cdn.britannica.com/88/30388-004-CD4E5CD8/Blok.jpg' },
+      { id: 'akhmatova', stage: 1, name: 'Анна Ахматова', school: 'Акмеизм', work: 'Поэма «Реквием»', img: 'http://www.saint-petersburg.com/images/famous-people/anna-akhmatova/anna-akhmatova.jpg' },
+      { id: 'mayakovsky', stage: 1, name: 'Владимир Маяковский', school: 'Футуризм', work: '«Облако в штанах»', img: 'https://www.superstock.com/cdn/4266/Comp/4266-18022.webp' },
+      { id: 'kafka', stage: 2, name: 'Франц Кафка', school: 'Модернизм', work: '«Превращение», «Процесс»', img: 'https://www.meisterdrucke.ie/kunstwerke/1260px/-%20Czech%20School%20-%20Portrait%20of%20Franz%20Kafka%20%281883%20%201924%29%20%20-%20%28MeisterDrucke-661449%29.jpg' },
+      { id: 'hemingway', stage: 3, name: 'Эрнест Хемингуэй', school: 'Потерянное поколение', work: '«Старик и море»', img: 'https://collectionapi.metmuseum.org/api/collection/v1/iiif/264764/597664/restricted' },
+      { id: 'bulgakov', stage: 4, name: 'Михаил Булгаков', school: 'Русский роман', work: '«Мастер и Маргарита»', img: 'https://images-cdn.bridgemanimages.com/api/1.0/image/600wm.XBH.6689630.7055475/366687.jpg' },
+      { id: 'camus', stage: 5, name: 'Альбер Камю', school: 'Экзистенциализм', work: '«Посторонний», «Чума»', img: 'https://lesoeuvres.pinaultcollection.com/media/styles/ex_v/s3/art/11767_visuel_REF_CARTIER-BRESSON_AlbertCamusParis1944.jpg?itok=Eeo8j_3W' },
+      { id: 'marquez', stage: 6, name: 'Габриэль Гарсиа Маркес', school: 'Магический реализм', work: '«Сто лет одиночества»', img: 'https://cdn.britannica.com/03/11603-050-85A0D5EA/Gabriel-Garcia-Marquez-1982.jpg' },
+      { id: 'borges', stage: 6, name: 'Хорхе Луис Борхес', school: 'Постмодернизм', work: '«Вымыслы»', img: 'https://www.bostonreview.net/wp-content/uploads/2022/10/719px-Jorge_Luis_Borges_1951_by_Grete_Stern.jpg' }
+    ];
+
+    // Звуковые эффекты через Tone.js
+    function playTone(type) {
+      if (!soundEnabled || typeof Tone === 'undefined') return;
+      try {
+        const synth = new Tone.Synth().toDestination();
+        if (type === 'success') {
+          synth.triggerAttackRelease('C5', '16n');
+          setTimeout(() => synth.triggerAttackRelease('G5', '8n'), 120);
+        } else if (type === 'click') {
+          synth.triggerAttackRelease('E4', '32n');
+        } else if (type === 'error') {
+          synth.triggerAttackRelease('A2', '8n');
+        }
+      } catch (e) {}
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      document.getElementById('sound-icon').className = soundEnabled ? 'fa-solid fa-volume-high text-xs' : 'fa-solid fa-volume-xmark text-xs text-white/40';
+    }
+
+    function showToast(title, desc) {
+      const box = document.getElementById('toast-box');
+      document.getElementById('toast-title').textContent = title;
+      document.getElementById('toast-desc').textContent = desc;
+      box.classList.remove('translate-x-[140%]');
+      setTimeout(() => box.classList.add('translate-x-[140%]'), 3200);
+    }
+
+    // Рендер кнопок номеров 1–7 сверху (ВСЕГДА КЛИКАБЕЛЬНЫ, ЧТОБЫ НЕ ЗАСТРЯТЬ!)
+    function renderHUD() {
+      const container = document.getElementById('hud-level-nodes');
+      const titles = ['Пролог', 'Серебряный век', 'Модернизм', 'Хемингуэй', 'Русский роман', 'Антиутопии', 'Постмодерн'];
+      container.innerHTML = titles.map((t, idx) => {
+        const isCurrent = idx === currentStage;
+        const isSolved = solvedStages[idx];
+        return `
+          <button onclick="jumpToStage(${idx})" title="Перейти в Зал 0${idx + 1}: ${t}"
+            class="game-btn px-2.5 py-1.5 rounded-lg font-mono text-xs font-bold transition-all flex items-center gap-1.5 border ${
+              isCurrent
+                ? 'bg-gold text-obsidian border-gold shadow-lg shadow-gold/30 scale-105'
+                : isSolved
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
+                  : 'bg-white/5 text-white/75 border-white/15 hover:bg-white/15 hover:text-white'
+            }">
+            <span>0${idx + 1}</span>
+            ${isSolved ? '<i class="fa-solid fa-check text-[9px]"></i>' : ''}
+          </button>
+        `;
+      }).join('');
+
+      // Обновляем XP и прогресс
+      const solvedCount = solvedStages.filter(Boolean).length;
+      const pct = Math.max(14, Math.round(((currentStage + 1) / 7) * 100));
+      document.getElementById('global-progress-bar').style.width = pct + '%';
+      document.getElementById('xp-badge').textContent = playerXP + ' XP';
+      document.getElementById('player-rank').textContent = solvedCount >= 6 ? 'Ранг: Магистр Архива' : solvedCount >= 3 ? 'Ранг: Хранитель' : 'Ранг: Искатель';
+
+      // Счетчик кодекса
+      const unlockedWriters = writersCodex.filter(w => solvedStages[w.stage] || unlockedStages[w.stage]).length;
+      document.getElementById('codex-counter').textContent = `${unlockedWriters}/9`;
+
+      // Индикаторы в футере
+      document.getElementById('stage-indicator').textContent = `ЗАЛ 0${currentStage + 1} / 07`;
+      document.getElementById('prev-btn').disabled = currentStage === 0;
+      document.getElementById('next-btn').disabled = currentStage === 6;
+    }
+
+    // Мгновенный переход на любой номер зала без блокировок
+    function jumpToStage(idx) {
+      playTone('click');
+      unlockedStages[idx] = true;
+      currentStage = idx;
+      // Если было открыто модальное окно — закрываем его, чтобы пользователь сразу увидел слайд
+      document.getElementById('voice-studio-modal').classList.add('hidden');
+      document.getElementById('codex-modal').classList.add('hidden');
+      renderStage();
+      renderHUD();
+      updateNarratorPreview();
+    }
+
+    function goPrevStage() {
+      if (currentStage > 0) jumpToStage(currentStage - 1);
+    }
+
+    function goNextStage() {
+      if (currentStage < 6) jumpToStage(currentStage + 1);
+    }
+
+    function completeStageChallenge(stageIdx, rewardXP) {
+      if (!solvedStages[stageIdx]) {
+        solvedStages[stageIdx] = true;
+        if (stageIdx + 1 < 7) unlockedStages[stageIdx + 1] = true;
+        playerXP += rewardXP;
+        playTone('success');
+        showToast(`Зал 0${stageIdx + 1} полностью открыт!`, `+${rewardXP} XP и новые карточки писателей в Кодексе.`);
+      }
+      renderStage();
+      renderHUD();
+    }
+
+    function unlockAllStages() {
+      unlockedStages = [true, true, true, true, true, true, true];
+      solvedStages = [true, true, true, true, true, true, true];
+      playerXP = 1500;
+      playTone('success');
+      showToast('Все 7 залов разблокированы!', 'Теперь открыты все слайды и все 9 карточек писателей.');
+      renderStage();
+      renderHUD();
+    }
+
+    // Рендер содержимого каждого из 7 залов
+    function renderStage() {
+      const container = document.getElementById('stage-container');
+      const isSolved = solvedStages[currentStage];
+
+      if (currentStage === 0) {
+        container.innerHTML = `
+          <div class="glass-card rounded-3xl p-6 sm:p-10 border border-gold/30 space-y-8">
+            <div class="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-5">
+              <div>
+                <span class="font-mono text-xs uppercase tracking-widest text-gold">Зал 01 • Врата Архива</span>
+                <h2 class="font-serif text-3xl sm:text-5xl font-bold text-white mt-1">Литература XX века: Эпоха потрясений и смыслов</h2>
+              </div>
+              <span class="px-3 py-1 rounded-full bg-gold/15 border border-gold/40 font-mono text-xs text-gold">1900 — 2000</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div class="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+                <div class="text-3xl font-serif font-bold text-gold">05 парадигм</div>
+                <div class="text-sm font-semibold text-white">От символизма до постмодерна</div>
+                <p class="text-xs text-white/65">Радикальный слом классического романа XIX века и уход в подсознание, миф и гипертекст.</p>
+              </div>
+              <div class="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+                <div class="text-3xl font-serif font-bold text-rose-400">12+ течений</div>
+                <div class="text-sm font-semibold text-white">Бунт формы и ритма</div>
+                <p class="text-xs text-white/65">Футуризм, акмеизм, поток сознания, экзистенциализм, антиутопия и магический реализм.</p>
+              </div>
+              <div class="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+                <div class="text-3xl font-serif font-bold text-emerald-400">9 портретов</div>
+                <div class="text-sm font-semibold text-white">Главные лица столетия</div>
+                <p class="text-xs text-white/65">Блок, Ахматова, Маяковский, Кафка, Хемингуэй, Булгаков, Камю, Маркес и Борхес.</p>
+              </div>
+            </div>
+
+            <div class="p-6 rounded-2xl bg-gradient-to-r from-amber-500/15 via-gold/10 to-emerald-500/15 border border-gold/40 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div class="space-y-1">
+                <div class="font-mono text-xs uppercase text-gold font-bold">Испытание Зала 01</div>
+                <p class="text-sm text-white/90">Активируйте печать Хранителя или нажмите на любой номер зала (01–07) в верхней панели.</p>
+              </div>
+              <button onclick="completeStageChallenge(0, 150); jumpToStage(1);" class="game-btn px-6 py-3 rounded-xl bg-gradient-to-r from-gold to-amber-500 text-obsidian font-bold text-xs uppercase tracking-wider shrink-0 shadow-lg shadow-gold/25">
+                Открыть Архив и перейти в Зал 02 →
+              </button>
+            </div>
+          </div>
+        `;
+      } else if (currentStage === 1) {
+        container.innerHTML = `
+          <div class="glass-card rounded-3xl p-6 sm:p-10 border border-gold/30 space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
+              <div>
+                <span class="font-mono text-xs uppercase tracking-widest text-gold">Зал 02 • Русская поэзия начала века</span>
+                <h2 class="font-serif text-3xl sm:text-4xl font-bold text-white mt-1">Серебряный век: Символизм, Акмеизм, Футуризм</h2>
+              </div>
+              ${!isSolved ? `<button onclick="completeStageChallenge(1, 200)" class="game-btn px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 text-xs font-mono">Показать ответ сразу</button>` : ''}
+            </div>
+
+            ${!isSolved ? `
+              <div class="p-5 rounded-2xl bg-amber-500/10 border border-gold/40 space-y-4">
+                <p class="text-xs font-mono uppercase text-gold font-bold">Мини-загадка зала (или нажмите кнопку выше):</p>
+                <p class="text-sm sm:text-base text-white">Кто из поэтов Серебряного века представлял <strong>футуризм</strong> и написал поэму «Облако в штанах»?</p>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button onclick="playTone('error'); this.classList.add('shake-error')" class="game-btn p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-left text-xs sm:text-sm text-white">А. Александр Блок</button>
+                  <button onclick="playTone('error'); this.classList.add('shake-error')" class="game-btn p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-left text-xs sm:text-sm text-white">Б. Анна Ахматова</button>
+                  <button onclick="completeStageChallenge(1, 200)" class="game-btn p-3.5 rounded-xl bg-gold/20 hover:bg-gold/30 border border-gold/50 text-left text-xs sm:text-sm text-gold font-bold">В. Владимир Маяковский ✓</button>
+                </div>
+              </div>
+            ` : ''}
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div class="glass-card rounded-2xl p-4 border border-white/10 space-y-3">
+                <div class="portrait-box h-56 rounded-xl flex items-center justify-center p-2">
+                  <img src="https://cdn.britannica.com/88/30388-004-CD4E5CD8/Blok.jpg" alt="Александр Блок" class="max-h-full object-contain rounded-lg">
+                </div>
+                <span class="font-mono text-[11px] uppercase text-amber-400">Символизм</span>
+                <h3 class="font-serif text-2xl font-bold text-white">Александр Блок</h3>
+                <p class="text-xs text-white/70">Поэзия намёков, мистических предчувствий и музыки стихии («Двенадцать», «Незнакомка»).</p>
+              </div>
+              <div class="glass-card rounded-2xl p-4 border border-white/10 space-y-3">
+                <div class="portrait-box h-56 rounded-xl flex items-center justify-center p-2">
+                  <img src="http://www.saint-petersburg.com/images/famous-people/anna-akhmatova/anna-akhmatova.jpg" alt="Анна Ахматова" class="max-h-full object-contain rounded-lg">
+                </div>
+                <span class="font-mono text-[11px] uppercase text-emerald-400">Акмеизм</span>
+                <h3 class="font-serif text-2xl font-bold text-white">Анна Ахматова</h3>
+                <p class="text-xs text-white/70">Возврат к предметной точности, психологической детали и классической ясности («Реквием»).</p>
+              </div>
+              <div class="glass-card rounded-2xl p-4 border border-white/10 space-y-3">
+                <div class="portrait-box h-56 rounded-xl flex items-center justify-center p-2">
+                  <img src="https://www.superstock.com/cdn/4266/Comp/4266-18022.webp" alt="Владимир Маяковский" class="max-h-full object-contain rounded-lg">
+                </div>
+                <span class="font-mono text-[11px] uppercase text-rose-400">Футуризм</span>
+                <h3 class="font-serif text-2xl font-bold text-white">Владимир Маяковский</h3>
+                <p class="text-xs text-white/70">Энергия площадей, ступенчатый ритм «лесенки» и смелое словотворчество («Облако в штанах»).</p>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (currentStage === 2) {
+        container.innerHTML = `
+          <div class="glass-card rounded-3xl p-6 sm:p-10 border border-gold/30 space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
+              <div>
+                <span class="font-mono text-xs uppercase tracking-widest text-gold">Зал 03 • Революция сознания</span>
+                <h2 class="font-serif text-3xl sm:text-4xl font-bold text-white mt-1">Европейский модернизм и «Поток сознания»</h2>
+              </div>
+            </div>
+
+            ${!isSolved ? `
+              <div class="p-5 rounded-2xl bg-amber-500/10 border border-gold/40 space-y-3">
+                <p class="text-sm text-white">Чей герой Грегор Замза однажды утром проснулся в своей постели превратившимся в огромное насекомое?</p>
+                <div class="flex flex-wrap gap-3">
+                  <button onclick="completeStageChallenge(2, 200)" class="game-btn px-4 py-2.5 rounded-xl bg-gold text-obsidian font-bold text-xs">Франц Кафка («Превращение») ✓</button>
+                  <button onclick="playTone('error')" class="game-btn px-4 py-2.5 rounded-xl bg-white/10 text-white text-xs">Эрнест Хемингуэй</button>
+                </div>
+              </div>
+            ` : ''}
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+              <div class="lg:col-span-5 glass-card p-5 rounded-2xl border border-white/10 space-y-3">
+                <div class="portrait-box h-72 rounded-xl flex items-center justify-center p-3">
+                  <img src="https://www.meisterdrucke.ie/kunstwerke/1260px/-%20Czech%20School%20-%20Portrait%20of%20Franz%20Kafka%20%281883%20%201924%29%20%20-%20%28MeisterDrucke-661449%29.jpg" alt="Франц Кафка" class="max-h-full object-contain rounded-lg">
+                </div>
+                <h3 class="font-serif text-2xl font-bold text-gold text-center">Франц Кафка (1883–1924)</h3>
+                <p class="text-xs text-center text-white/70">Главный мастер литературного абсурда и отчуждения («Процесс», «Замок», «Превращение»).</p>
+              </div>
+              <div class="lg:col-span-7 space-y-4">
+                <div class="p-5 rounded-2xl bg-white/5 border-l-4 border-l-gold space-y-1">
+                  <h4 class="font-serif text-xl font-bold text-white">Джеймс Джойс и Вирджиния Вулф</h4>
+                  <p class="text-xs sm:text-sm text-white/75">Техника «потока сознания» (Stream of Consciousness): фиксация мельчайших ассоциаций и внутренних монологов («Улисс», «Миссис Дэллоуэй»).</p>
+                </div>
+                <div class="p-5 rounded-2xl bg-white/5 border-l-4 border-l-amber-400 space-y-1">
+                  <h4 class="font-serif text-xl font-bold text-white">Марсель Пруст</h4>
+                  <p class="text-xs sm:text-sm text-white/75">Цикл «В поисках утраченного времени»: субъективная память и метафора пирожного «мадлен» как ключ к воскрешению прошлого.</p>
+                </div>
+                <div class="p-5 rounded-2xl bg-white/5 border-l-4 border-l-rose-400 space-y-1">
+                  <h4 class="font-serif text-xl font-bold text-white">Франц Кафка</h4>
+                  <p class="text-xs sm:text-sm text-white/75">Трагедия маленького человека перед лицом безликой бюрократической системы и абсурдного закона.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (currentStage === 3) {
+        container.innerHTML = `
+          <div class="glass-card rounded-3xl p-6 sm:p-10 border border-gold/30 space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
+              <div>
+                <span class="font-mono text-xs uppercase tracking-widest text-gold">Зал 04 • Суровая правда</span>
+                <h2 class="font-serif text-3xl sm:text-4xl font-bold text-white mt-1">«Потерянное поколение» и Принцип айсберга</h2>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+              <div class="lg:col-span-4 glass-card p-5 rounded-2xl border border-white/10 space-y-3">
+                <div class="portrait-box h-64 rounded-xl flex items-center justify-center p-3">
+                  <img src="https://collectionapi.metmuseum.org/api/collection/v1/iiif/264764/597664/restricted" alt="Эрнест Хемингуэй" class="max-h-full object-contain rounded-lg">
+                </div>
+                <h3 class="font-serif text-2xl font-bold text-gold text-center">Эрнест Хемингуэй</h3>
+                <p class="text-xs text-center text-white/70">Лауреат Нобелевской премии («Прощай, оружие!», «Старик и море»).</p>
+              </div>
+
+              <div class="lg:col-span-8 space-y-4">
+                <div class="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                  <div class="flex items-center justify-between">
+                    <span class="font-mono text-xs uppercase text-gold font-bold">Интерактивная шкала «Принципа айсберга»</span>
+                    <button onclick="completeStageChallenge(3, 200)" class="px-3 py-1 rounded-lg bg-gold text-obsidian font-mono text-xs font-bold">Калибровать 85% ✓</button>
+                  </div>
+                  <div class="space-y-2">
+                    <div class="flex justify-between text-xs text-white/80">
+                      <span>Над водой (Видимый текст, сухие диалоги): <strong>15%</strong></span>
+                      <span class="text-gold">Под водой (Скрытая боль и подтекст): <strong>85%</strong></span>
+                    </div>
+                    <div class="w-full h-5 rounded-full bg-white/10 overflow-hidden flex">
+                      <div class="w-[15%] bg-sky-400 h-full"></div>
+                      <div class="w-[85%] bg-amber-500 h-full"></div>
+                    </div>
+                  </div>
+                  <p class="text-xs sm:text-sm text-white/75">
+                    Авторы направления: <strong>Эрнест Хемингуэй, Эрих Мария Ремарк</strong> («На Западном фронте без перемен», «Три товарища»), <strong>Фрэнсис Скотт Фицджеральд</strong> («Великий Гэтсби»).
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (currentStage === 4) {
+        container.innerHTML = `
+          <div class="glass-card rounded-3xl p-6 sm:p-10 border border-gold/30 space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
+              <div>
+                <span class="font-mono text-xs uppercase tracking-widest text-gold">Зал 05 • Отечественная классика XX века</span>
+                <h2 class="font-serif text-3xl sm:text-4xl font-bold text-white mt-1">Четыре измерения русского романа</h2>
+              </div>
+              ${!isSolved ? `<button onclick="completeStageChallenge(4, 250)" class="game-btn px-4 py-2 rounded-xl bg-gold text-obsidian font-bold text-xs">Спасти рукописи ✓</button>` : ''}
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+              <div class="lg:col-span-4 glass-card p-5 rounded-2xl border border-white/10 space-y-3">
+                <div class="portrait-box h-64 rounded-xl flex items-center justify-center p-3">
+                  <img src="https://images-cdn.bridgemanimages.com/api/1.0/image/600wm.XBH.6689630.7055475/366687.jpg" alt="Михаил Булгаков" class="max-h-full object-contain rounded-lg">
+                </div>
+                <h3 class="font-serif text-2xl font-bold text-gold text-center">Михаил Булгаков</h3>
+                <p class="text-xs text-center text-white/70">«Мастер и Маргарита», «Белая гвардия», «Собачье сердце».</p>
+              </div>
+              <div class="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                  <h4 class="font-serif text-xl font-bold text-gold">Михаил Булгаков</h4>
+                  <p class="text-xs text-white/75">Соединение библейской философии, мистического гротеска и острой сатиры на московский быт.</p>
+                </div>
+                <div class="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                  <h4 class="font-serif text-xl font-bold text-white">Андрей Платонов</h4>
+                  <p class="text-xs text-white/75">Метафизическая притча и уникальный язык («Котлован», «Чевенгур»).</p>
+                </div>
+                <div class="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                  <h4 class="font-serif text-xl font-bold text-white">Михаил Шолохов</h4>
+                  <p class="text-xs text-white/75">Монументальная народная эпопея «Тихий Дон» о трагическом расколе страны.</p>
+                </div>
+                <div class="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                  <h4 class="font-serif text-xl font-bold text-amber-400">Владимир Набоков</h4>
+                  <p class="text-xs text-white/75">Виртуозная эстетическая игра стиля и памяти («Дар», «Защита Лужина»).</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (currentStage === 5) {
+        container.innerHTML = `
+          <div class="glass-card rounded-3xl p-6 sm:p-10 border border-gold/30 space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
+              <div>
+                <span class="font-mono text-xs uppercase tracking-widest text-gold">Зал 06 • Пророчества и Свобода</span>
+                <h2 class="font-serif text-3xl sm:text-4xl font-bold text-white mt-1">Антиутопии и Экзистенциализм</h2>
+              </div>
+              ${!isSolved ? `<button onclick="completeStageChallenge(5, 250)" class="game-btn px-4 py-2 rounded-xl bg-gold text-obsidian font-bold text-xs">Разблокировать матрицу ✓</button>` : ''}
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+              <div class="lg:col-span-4 glass-card p-5 rounded-2xl border border-white/10 space-y-3">
+                <div class="portrait-box h-64 rounded-xl flex items-center justify-center p-3">
+                  <img src="https://lesoeuvres.pinaultcollection.com/media/styles/ex_v/s3/art/11767_visuel_REF_CARTIER-BRESSON_AlbertCamusParis1944.jpg?itok=Eeo8j_3W" alt="Альбер Камю" class="max-h-full object-contain rounded-lg">
+                </div>
+                <h3 class="font-serif text-2xl font-bold text-gold text-center">Альбер Камю</h3>
+                <p class="text-xs text-center text-white/70">Философия абсурда и бунта («Посторонний», «Чума», «Миф о Сизифе»).</p>
+              </div>
+
+              <div class="lg:col-span-8 space-y-3">
+                <div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex justify-between items-center">
+                  <div>
+                    <span class="font-mono text-xs text-gold">1920 • Прародитель жанра</span>
+                    <h4 class="font-serif text-xl font-bold text-white">Евгений Замятин — «Мы»</h4>
+                  </div>
+                  <span class="text-xs text-white/70">Математическая диктатура Единого Государства</span>
+                </div>
+                <div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex justify-between items-center">
+                  <div>
+                    <span class="font-mono text-xs text-emerald-400">1932 • Диктатура удовольствия</span>
+                    <h4 class="font-serif text-xl font-bold text-white">Олдос Хаксли — «О дивный новый мир»</h4>
+                  </div>
+                  <span class="text-xs text-white/70">Биоинженерия, касты и потребление</span>
+                </div>
+                <div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex justify-between items-center">
+                  <div>
+                    <span class="font-mono text-xs text-rose-400">1949 • Тотальный контроль</span>
+                    <h4 class="font-serif text-xl font-bold text-white">Джордж Оруэлл — «1984»</h4>
+                  </div>
+                  <span class="text-xs text-white/70">Большой Брат, полиция мыслей и новояз</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (currentStage === 6) {
+        container.innerHTML = `
+          <div class="glass-card rounded-3xl p-6 sm:p-10 border border-gold/30 space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
+              <div>
+                <span class="font-mono text-xs uppercase tracking-widest text-gold">Зал 07 • Финал столетия</span>
+                <h2 class="font-serif text-3xl sm:text-4xl font-bold text-white mt-1">Магический реализм и Постмодернизм</h2>
+              </div>
+              <button onclick="completeStageChallenge(6, 300); toggleCodex();" class="game-btn px-5 py-2.5 rounded-xl bg-gradient-to-r from-gold to-amber-500 text-obsidian font-bold text-xs uppercase">
+                Открыть полный Кодекс лиц 🏆
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="glass-card p-5 rounded-2xl border border-white/10 flex flex-col sm:flex-row gap-4 items-center">
+                <div class="portrait-box w-36 h-44 rounded-xl shrink-0 flex items-center justify-center p-2">
+                  <img src="https://cdn.britannica.com/03/11603-050-85A0D5EA/Gabriel-Garcia-Marquez-1982.jpg" alt="Габриэль Гарсиа Маркес" class="max-h-full object-contain rounded-lg">
+                </div>
+                <div class="space-y-1.5">
+                  <span class="font-mono text-[11px] uppercase text-amber-400">Магический реализм</span>
+                  <h3 class="font-serif text-2xl font-bold text-white">Габриэль Гарсиа Маркес</h3>
+                  <p class="text-xs text-white/75">«Сто лет одиночества»: органическое слияние латиноамериканского мифа, чуда и исторической хроники города Макондо.</p>
+                </div>
+              </div>
+
+              <div class="glass-card p-5 rounded-2xl border border-white/10 flex flex-col sm:flex-row gap-4 items-center">
+                <div class="portrait-box w-36 h-44 rounded-xl shrink-0 flex items-center justify-center p-2">
+                  <img src="https://www.bostonreview.net/wp-content/uploads/2022/10/719px-Jorge_Luis_Borges_1951_by_Grete_Stern.jpg" alt="Хорхе Луис Борхес" class="max-h-full object-contain rounded-lg">
+                </div>
+                <div class="space-y-1.5">
+                  <span class="font-mono text-[11px] uppercase text-purple-400">Постмодернизм</span>
+                  <h3 class="font-serif text-2xl font-bold text-white">Хорхе Луис Борхес</h3>
+                  <p class="text-xs text-white/75">«Вымыслы», «Вавилонская библиотека»: мир как бесконечный гипертекст, игра цитат, зеркал и философских лабиринтов (вместе с Умберто Эко).</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // Модальное окно Кодекса
+    function toggleCodex() {
+      const modal = document.getElementById('codex-modal');
+      modal.classList.toggle('hidden');
+      if (!modal.classList.contains('hidden')) {
+        const grid = document.getElementById('codex-grid');
+        grid.innerHTML = writersCodex.map(w => `
+          <div class="glass-card p-4 rounded-2xl border border-white/15 flex gap-4 items-center">
+            <div class="portrait-box w-20 h-24 rounded-xl shrink-0 flex items-center justify-center p-1">
+              <img src="${w.img}" alt="${w.name}" class="max-h-full object-contain rounded">
+            </div>
+            <div>
+              <span class="font-mono text-[10px] uppercase text-gold">${w.school}</span>
+              <h4 class="font-serif text-xl font-bold text-white">${w.name}</h4>
+              <p class="text-xs text-white/70 mt-1">${w.work}</p>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    // Модальное окно Студии Озвучки
+    function toggleVoiceStudio() {
+      const modal = document.getElementById('voice-studio-modal');
+      modal.classList.toggle('hidden');
+      if (!modal.classList.contains('hidden')) {
+        selectedStudioStage = currentStage;
+        renderStudioStageButtons();
+        loadStudioPreset();
+      }
+    }
+
+    function renderStudioStageButtons() {
+      const container = document.getElementById('studio-stage-buttons');
+      container.innerHTML = [0, 1, 2, 3, 4, 5, 6].map(idx => `
+        <button onclick="selectStudioStage(${idx})" class="game-btn py-2 px-3 rounded-xl font-mono text-xs font-bold border ${
+          selectedStudioStage === idx
+            ? 'bg-gold text-obsidian border-gold'
+            : 'bg-white/5 text-white/80 border-white/15 hover:bg-white/15'
+        }">
+          Зал 0${idx + 1}
+        </button>
+      `).join('');
+    }
+
+    function selectStudioStage(idx) {
+      selectedStudioStage = idx;
+      currentStage = idx;
+      unlockedStages[idx] = true;
+      renderStage();
+      renderHUD();
+      renderStudioStageButtons();
+      loadStudioPreset();
+    }
+
+    function loadStudioPreset() {
+      const mode = document.getElementById('studio-mode-select').value;
+      document.getElementById('studio-script-textarea').value = charismaticScripts[mode][selectedStudioStage];
+    }
+
+    function copyStudioText() {
+      const textarea = document.getElementById('studio-script-textarea');
+      textarea.select();
+      document.execCommand('copy');
+      document.getElementById('copy-btn-label').textContent = 'Скопировано!';
+      setTimeout(() => document.getElementById('copy-btn-label').textContent = 'Скопировать текст', 1800);
+    }
+
+    // Обновление превью текста ведущего в верхней панели
+    function updateNarratorPreview() {
+      const mode = document.getElementById('quick-voice-mode').value;
+      const text = charismaticScripts[mode][currentStage];
+      document.getElementById('narrator-script-preview').textContent = `«${text.replace(/\n/g, ' ')}»`;
+    }
+
+    // =========================================================
+    // ЖИВОЙ НЕЙРОСЕТЕВОЙ МУЖСКОЙ ГОЛОС (GEMINI 2.5 FLASH TTS)
+    // =========================================================
+    let activeAudioElement = null;
+    const audioCache = {};
+
+    function base64ToArrayBuffer(base64) {
+      const binaryString = window.atob(base64);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      return bytes.buffer;
+    }
+
+    function pcmToWav(pcm16, sampleRate = 24000) {
+      const numChannels = 1;
+      const bitsPerSample = 16;
+      const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+      const blockAlign = numChannels * (bitsPerSample / 8);
+      const dataSize = pcm16.length * 2;
+      const buffer = new ArrayBuffer(44 + dataSize);
+      const view = new DataView(buffer);
+
+      function writeString(offset, str) {
+        for (let i = 0; i < str.length; i++) {
+          view.setUint8(offset + i, str.charCodeAt(i));
+        }
+      }
+
+      writeString(0, 'RIFF');
+      view.setUint32(4, 36 + dataSize, true);
+      writeString(8, 'WAVE');
+      writeString(12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, numChannels, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, byteRate, true);
+      view.setUint16(32, blockAlign, true);
+      view.setUint16(34, bitsPerSample, true);
+      writeString(36, 'data');
+      view.setUint32(40, dataSize, true);
+
+      let offset = 44;
+      for (let i = 0; i < pcm16.length; i++, offset += 2) {
+        view.setInt16(offset, pcm16[i], true);
+      }
+      return new Blob([buffer], { type: 'audio/wav' });
+    }
+
+    async function fetchGeminiMaleTTS(text, mode) {
+      const cacheKey = `${mode}_${text}`;
+      if (audioCache[cacheKey]) return audioCache[cacheKey];
+
+      const apiKey = "";
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+
+      let promptText = text;
+      let speechConfig = {};
+
+      if (mode === 'standup') {
+        promptText = `ВНИМАНИЕ, МАКСИМАЛЬНАЯ ЭМОЦИЯ И КУРАЖ! Произнеси этот текст невероятно харизматично, ярко, с живым юмором, яркими интонационными акцентами, искренним удивлением и воодушевлением, как лучший стендап-комик на сцене, без какой-либо роботоподобной монотонности:\n${text}`;
+        speechConfig = {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: "Fenrir" }
+          }
+        };
+      } else if (mode === 'duo') {
+        promptText = `ВНИМАНИЕ, НАСТОЯЩИЙ ЭМОЦИОНАЛЬНЫЙ СПОР И ЭНЕРГИЯ! Озвучь этот диалог двух друзей предельно живо, шумно, с горячими эмоциями, смешками, подколками и бурным живым темпераментом:\n${text}`;
+        speechConfig = {
+          multiSpeakerVoiceConfig: {
+            speakerVoiceConfigs: [
+              { speaker: "Макс", voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } } },
+              { speaker: "Дэн", voiceConfig: { prebuiltVoiceConfig: { voiceName: "Orus" } } }
+            ]
+          }
+        };
+      } else {
+        promptText = `РЕЖИССЁРСКАЯ ЗАДАЧА НА МОЩНУЮ ЭМОЦИЮ: Озвучь этот текст очень низким, глубоким, громовым, но при этом предельно страстным, драматичным и харизматичным бас-баритоном. Добавь максимальную уверенность, мощную подачу, вес каждого слова и живой кинематографичный нерв, как в трейлере великого блокбастера:\n${text}`;
+        speechConfig = {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: "Charon" }
+          }
+        };
+      }
+
+      const payload = {
+        contents: [{ parts: [{ text: promptText }] }],
+        generationConfig: {
+          responseModalities: ["AUDIO"],
+          speechConfig: speechConfig
+        },
+        model: "gemini-2.5-flash-preview-tts"
+      };
+
+      const delays = [1000, 2000, 4000];
+      let lastError = null;
+
+      for (let attempt = 0; attempt <= delays.length; attempt++) {
+        try {
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const result = await response.json();
+          const part = result?.candidates?.[0]?.content?.parts?.[0];
+          const audioData = part?.inlineData?.data;
+          const mimeType = part?.inlineData?.mimeType || "audio/L16;rate=24000";
+
+          if (audioData) {
+            const rateMatch = mimeType.match(/rate=(\d+)/);
+            const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+            const pcmBuffer = base64ToArrayBuffer(audioData);
+            const pcm16 = new Int16Array(pcmBuffer);
+            const wavBlob = pcmToWav(pcm16, sampleRate);
+            const audioUrl = URL.createObjectURL(wavBlob);
+            audioCache[cacheKey] = audioUrl;
+            return audioUrl;
+          }
+          throw new Error("Empty audio data");
+        } catch (err) {
+          lastError = err;
+          if (attempt < delays.length) {
+            await new Promise(r => setTimeout(r, delays[attempt]));
+          }
+        }
+      }
+      throw lastError;
+    }
+
+    async function speakCurrentSlide() {
+      const mode = document.getElementById('quick-voice-mode').value;
+      const text = charismaticScripts[mode][currentStage];
+      await playHumanMaleVoice(text, mode, false);
+    }
+
+    async function generateStudioVoice() {
+      const mode = document.getElementById('studio-mode-select').value;
+      const text = document.getElementById('studio-script-textarea').value;
+      await playHumanMaleVoice(text, mode, true);
+    }
+
+    async function playHumanMaleVoice(text, mode, isStudio) {
+      stopTTSAudio();
+
+      const playBtn = document.getElementById('play-slide-tts-btn');
+      const playIcon = document.getElementById('play-slide-tts-icon');
+      const playLabel = document.getElementById('play-slide-tts-label');
+      const stopBtn = document.getElementById('stop-slide-tts-btn');
+      const statusBadge = document.getElementById('voice-status-badge');
+
+      const studioBtn = document.getElementById('studio-generate-btn');
+      const studioLabel = document.getElementById('studio-generate-label');
+      const downloadLink = document.getElementById('studio-download-wav');
+
+      playBtn.disabled = true;
+      playIcon.className = 'fa-solid fa-spinner fa-spin';
+      playLabel.textContent = 'Генерация голоса...';
+      statusBadge.textContent = 'Синтез живого мужского тембра Gemini Neural TTS...';
+
+      if (studioBtn) {
+        studioBtn.disabled = true;
+        studioLabel.textContent = 'Создаём живой голос...';
+      }
+
+      try {
+        const wavUrl = await fetchGeminiMaleTTS(text, mode);
+
+        if (downloadLink) {
+          downloadLink.href = wavUrl;
+          downloadLink.download = `zal_0${currentStage + 1}_${mode}.wav`;
+          downloadLink.classList.remove('hidden');
+        }
+
+        activeAudioElement = new Audio(wavUrl);
+        if (mode === 'cinema') {
+          activeAudioElement.preservesPitch = false;
+          activeAudioElement.mozPreservesPitch = false;
+          activeAudioElement.webkitPreservesPitch = false;
+          activeAudioElement.playbackRate = 0.92;
+        }
+        stopBtn.clas
